@@ -1,5 +1,5 @@
 import os
-import requests
+#from requests import get  # No longer needed for mocking
 from typing import List
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -20,61 +20,27 @@ class Message(BaseModel):
     role: str
 
 # --------------------------
-# Weather Tool Implementation using Weatherstack API
+# Weather Tool Implementation (Mock Response)
 # --------------------------
 
 def get_weather(city: str) -> str:
     """
-    Fetches weather data for the given city using the Weatherstack API.
+    Mocks weather data for the given city.
     """
-    # Use the WEATHERSTACK_API_KEY environment variable if available,
-    # otherwise default to the provided access key.
-    access_key = os.getenv("WEATHERSTACK_API_KEY", "8dde6b30e3d7b6203743565676b704a9")
-    base_url = "http://api.weatherstack.com/current"
-    params = {
-        "access_key": access_key,
-        "query": city,
-    }
+    # Return a hardcoded weather report for testing purposes.
+    return (
+        f"Mock weather in {city}:\n"
+        "  Temperature: 1°C (feels like -5°C)\n"
+        "  Description: Clear skies\n"
+        "  Humidity: 40%\n"
+        "  Wind Speed: 10 km/h"
+    )
 
-    try:
-        response = requests.get(base_url, params=params)
-        response.raise_for_status()
-        data = response.json()
-
-        # Check for API error responses
-        if "error" in data:
-            return f"Error retrieving weather data: {data['error'].get('info', 'Unknown error')}"
-
-        # Extract weather details from the response
-        location = data.get("location", {})
-        current = data.get("current", {})
-
-        city_name = location.get("name", "Unknown")
-        country = location.get("country", "Unknown")
-        temperature = current.get("temperature", "N/A")
-        feelslike = current.get("feelslike", "N/A")
-        humidity = current.get("humidity", "N/A")
-        weather_descriptions = current.get("weather_descriptions", [])
-        description = weather_descriptions[0] if weather_descriptions else "N/A"
-        wind_speed = current.get("wind_speed", "N/A")
-
-        # Build a formatted weather report
-        weather_report = (
-            f"Weather in {city_name}, {country}:\n"
-            f"  Temperature: {temperature}°C (feels like {feelslike}°C)\n"
-            f"  Description: {description}\n"
-            f"  Humidity: {humidity}%\n"
-            f"  Wind Speed: {wind_speed} km/h"
-        )
-        return weather_report
-    except Exception as e:
-        return f"Error retrieving weather data: {e}"
-
-# Create the LangChain Tool for weather using the updated get_weather function
+# Create the LangChain Tool for weather using the mock get_weather function
 weather_tool = Tool(
     name="WeatherTool",
     func=get_weather,
-    description="Useful for retrieving the current weather for a given city using Weatherstack API. Input should be the city name."
+    description="Useful for retrieving the current weather for a given city (mock implementation). Input should be the city name."
 )
 
 # --------------------------
@@ -115,7 +81,7 @@ async def chat(messages: List[Message]) -> List[Message]:
 
     Response Body Example:
     [
-      {"content": "Weather in New York, United States: ...", "role": "assistant"}
+      {"content": "Mock weather in New York:\n  Temperature: 25°C (feels like 25°C)\n  ...", "role": "assistant"}
     ]
     """
     try:
@@ -137,3 +103,6 @@ async def health():
     Health check endpoint that returns a JSON indicating the service is running.
     """
     return {"status": "healthy"}
+
+if __name__ == "__main__":
+    uvicorn.run("weather_agent:app", host="0.0.0.0", port=8080, reload=True)
